@@ -45,7 +45,7 @@ El sistema consiste de un sintetizador digital de polifonía de hasta cuatro voc
 
 ---
 
-## 📐 2. Arquitectura del Sistema: Hardware y Software (Común)
+## 📐 2. Arquitectura del Sistema: Hardware y Software
 
 ### 🔌 Hardware & Interconexión
 * **Diagrama de Bloques:**
@@ -137,26 +137,26 @@ El sistema consiste de un sintetizador digital de polifonía de hasta cuatro voc
     * **Coeficientes del ecualizador:** hay dos juegos. El loop principal escribe el que está libre y publica un puntero, que la interrupción de audio toma al empezar un bloque.
     * **Buffer circular de la UART:** la interrupción escribe y el loop principal lee.
   * **Diagnóstico:** los contadores `audioUnderruns`, `audioSaturations` y `audioIsrMaxCycles` se leen con el depurador, con la CPU suspendida, y P2.8 permite medir la duración de la interrupción de audio con un osciloscopio.
-  * **Estado actual:** el ecualizador ya está integrado en la cadena de audio y se configura desde la aplicación; su validación en placa está en curso. La FFT y el manejo de las matrices LED todavía no están implementados: cuando se sumen, van a correr en el loop principal, después del parser, sin agregar trabajo a ninguna interrupción.
+  * **Estado actual:** el ecualizador está integrado en la cadena de audio y se configura desde la aplicación; se validó de oído, con evidencia indirecta (story 14). La FFT de 512 puntos y el cálculo de las 8 bandas están implementados y corren en el loop principal, después del parser, sin agregar trabajo a ninguna interrupción. La matriz WS2812B y las barras de espectro tienen el código y los tests de PC hechos; sus verificaciones en placa quedan pendientes.
 
 ---
 
-## ⚡ 3. Especificaciones Eléctricas, Alimentación y Entorno (Específico por Asignatura)
+## ⚡ 3. Especificaciones Eléctricas, Alimentación y Entorno
 
-### 🔌 Parámetros de Alimentación y Consumo (Común a ambas materias)
+### 🔌 Parámetros de Alimentación y Consumo
 * **Tensión de operación del sistema:** 3,3 V en el LPC1769 y sus entradas/salidas; 5 V en la etapa analógica de audio (LM358 y LM386) y en las matrices WS2812B.
 * **Método de alimentación:**
   * Placa LPC1769 y etapa de audio: 5 V por USB.
   * Matrices LED: fuente externa regulable ajustada a 5 V, con masa común con el LPC1769 y en una línea distinta de la del audio.
-* **Consumo estimado o medido:**
-  * En modo activo (máxima carga, matriz en blanco al 100 %): estimado en ≈ 3,8 A (64 LED a 60 mA), valor que el firmware evita limitando el brillo al 25 % (peor caso ≈ 1 A). Consumo medido: `XX mA` *(a medir en el Bloque 12)*.
+* **Consumo estimado:**
+  * En modo activo (máxima carga, matriz en blanco al 100 %): estimado en ≈ 3,8 A (64 LED a 60 mA), valor que el firmware evita limitando el brillo al 25 % (peor caso ≈ 1 A).
   * En modo bajo consumo: no aplica, el sistema no implementa modos de bajo consumo.
 
 * **IDE y SDK:** MCUXpresso IDE 25.6 con CMSIS Core y los drivers de periféricos del proyecto `CMSISv2p00_LPC17xx` (repo `LPC17xx-CMSIS-Driver-Enhancement`). Biblioteca de C: Redlib (semihost).
 * **Microcontrolador Principal:** NXP LPC1769 (ARM Cortex-M3, CCLK = 100 MHz).
 * **Bibliotecas de Terceros y Versiones:**
   * Firmware: ninguna además de CMSIS y los drivers; la FFT, los filtros Biquad y el protocolo UART son de implementación propia. Sin RTOS.
-  * Aplicación de escritorio: Python con PySide6, numpy, pyqtgraph y pyserial (versiones: `XX`, a completar al cerrar el proyecto) y pytest para los tests.
+  * Aplicación de escritorio: Python con PySide6, numpy, pyqtgraph y pyserial, y pytest para los tests.
 * **Periféricos Avanzados Utilizados:** SysTick (ADSR, potenciómetros y teclas), Timer (generación de peticiones DMA para las matrices), ADC en modo burst (potenciómetros), DAC (audio), GPDMA (canal 0: audio; canal 1: matrices), UART0 (aplicación), GPIO (teclas y línea de datos) y EINT1 (selección de onda), más NVIC, PINSEL y CLKPWR como configuración.
 * **Estrategia de Concurrencia:** bare-metal, sin RTOS, con la generación de audio en la ISR del DMA (prioridad máxima) y el trabajo pesado en el loop principal.
 
@@ -173,22 +173,19 @@ El sistema consiste de un sintetizador digital de polifonía de hasta cuatro voc
 
 ---
 
-## 🔄 4. Proceso de Integración y Desarrollo (Común)
-Describan cronológicamente cómo fueron sumando y testeando las diferentes partes del proyecto (enfoque modular de ingeniería).
-
+## 🔄 4. Proceso de Integración y Desarrollo
 El desarrollo es incremental: cada bloque se implementa, prueba y aprueba antes de pasar al siguiente, trabajando de a una story por vez. Un bloque se aprueba con todos sus criterios cumplidos y la evidencia guardada en `docs/evidencia/`; si algo aprobado se rompe, se arregla antes de seguir. La lógica se prueba en la PC (gcc y make para el firmware, pytest para la aplicación) y el hardware con mediciones en placa.
 
 * **Etapa 1 (Validación inicial):** *(Bloque 0, completado)* proyecto base en MCUXpresso, verificación del reloj (CCLK = 100 MHz), compilación y descarga, parpadeo del LED de la placa (P0.22) alternado por SysTick, diagnóstico por semihosting, estructura del repositorio y tests de ejemplo en la PC y con pytest.
-* **Etapa 2 (Audio de salida):** *(Bloques 1 a 3, pendientes)* DAC con `DACCNTVAL` para Fs = 32 kHz y senoide de prueba, reproducción continua con GPDMA y doble buffer con contador de underruns, y construcción de la etapa analógica (filtro Sallen-Key, LM386 y jack) para poder escuchar los bloques siguientes.
-* **Etapa 3 (Síntesis e interacción):** *(Bloques 4 a 7, pendientes)* oscilador DDS, cuatro voces con mezclador y saturación, lectura de las 8 teclas con antirrebote y asignación de voces, rotación de ondas con EINT1, y envolventes ADSR controladas por los potenciómetros vía ADC.
-* **Etapa 4 (Aplicación Python y comunicación):** *(Bloques 8 y 9, pendientes)* editor de armónicos con síntesis aditiva, instrumentos precargados, protocolo UART con tramas validadas y transferencia segura de la quinta onda.
-* **Etapa 5 (Procesamiento y visualización):** *(Bloques 10 a 13, pendientes)* ecualizador de tres bandas con Biquad en punto fijo, FFT propia de 512 puntos con 8 bandas, control de la matriz WS2812B con Timer + DMA e integración del visualizador de espectro.
+* **Etapa 2 (Audio de salida):** *(Bloques 1 a 3, completados)* DAC con `DACCNTVAL` para Fs = 32 kHz y senoide de prueba, reproducción continua con GPDMA y doble buffer con contador de underruns, y construcción de la etapa analógica (filtro Sallen-Key, LM386 y jack) para poder escuchar los bloques siguientes.
+* **Etapa 3 (Síntesis e interacción):** *(Bloques 4 a 7, completados)* oscilador DDS, cuatro voces con mezclador y saturación, lectura de las 8 teclas con antirrebote y asignación de voces, rotación de ondas con EINT1, y envolventes ADSR controladas por los potenciómetros vía ADC.
+* **Etapa 4 (Aplicación Python y comunicación):** *(Bloques 8 y 9, completados)* editor de armónicos con síntesis aditiva, instrumentos precargados, protocolo UART con tramas validadas y transferencia segura de la quinta onda.
+* **Etapa 5 (Procesamiento y visualización):** *(Bloques 10 a 13)* ecualizador de tres bandas con Biquad en punto fijo, FFT propia de 512 puntos con 8 bandas, control de la matriz WS2812B con Timer + DMA e integración del visualizador de espectro. Los bloques 10 y 11 están completados; los 12 y 13 tienen el código y los tests de PC hechos, con la verificación en placa pendiente.
 * **Etapa 6 (Sistema Completo):** *(Bloque 14, pendiente)* integración de todo, revisión de prioridades y buffers, medición de CPU y memoria, pruebas prolongadas con el contador de underruns en 0 y demostración en placa de la función de cada periférico.
 
 ---
 
-## 📊 5. Ensayos, Pruebas y Resultados (Común)
-Demuestren con datos empíricos que el sistema funciona correctamente. **Es obligatorio incluir registro visual**.
+## 📊 5. Ensayos, Pruebas y Resultados
 
 * **Pruebas Funcionales Realizadas:**
   * **Bloque 0 (realizado):** compilación sin errores, descarga a la placa, prueba de vida con el LED P0.22, diagnóstico por semihosting y ejecución de los tests de ejemplo (gcc en la PC y pytest).
@@ -278,14 +275,20 @@ Demuestren con datos empíricos que el sistema funciona correctamente. **Es obli
 
 ---
 
-## 📂 6. Estructura del Repositorio (Común)
-El repositorio debe mantener obligatoriamente la siguiente estructura limpia (¡Recuerden configurar correctamente el `.gitignore` para no subir carpetas temporales como `Debug/`, `Release/` o archivos `.p1` / `.d`!).
+## 📂 6. Estructura del Repositorio
 
 ```text
-├── firmware/          # Código fuente del proyecto (MPLABX / MCUXpresso / STM32Cube)
-│   ├── src/           # Archivos de código (.c)
-│   └── inc/           # Archivos de cabecera (.h)
-├── hardware/          # Archivos de diseño (KiCad/Altium), esquemáticos en PDF/Imagen y BOM
-├── docs/              # Datasheets clave, imágenes del README, notas de aplicación
-└── README.md          # Este archivo de presentación
-
+├── firmware/              # Firmware del LPC1769 (MCUXpresso)
+│   ├── src/               # Código fuente (.c), incluido el startup
+│   ├── inc/               # Cabeceras (.h)
+│   ├── tests/             # Tests de la lógica en la PC (gcc + make)
+│   └── tools/             # gen_tables.py: genera tables.c y tables.h
+├── app/                   # Aplicación de escritorio en Python (PySide6)
+│   ├── core/              # Lógica: armónicos, instrumentos, UART y ecualizador
+│   ├── ui/                # Interfaz gráfica
+│   └── tests/             # Tests con pytest
+├── hardware/              # Esquemático (KiCad), diagramas, etapa de audio y scripts de cálculo
+├── docs/                  # Especificación, backlog, stories y evidencia
+├── scrum/                 # Retrospectiva, review y weekly
+└── README.md              # Este archivo de presentación
+```
