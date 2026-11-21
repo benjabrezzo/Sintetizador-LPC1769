@@ -1,0 +1,30 @@
+# Artefactos de compilación de MCUXpresso
+Debug/
+Release/
+
+# Configuraciones de depuración: el IDE las regenera y llevan el serial de la sonda
+*.launch
+
+# Tests de lógica en la PC (gcc)
+firmware/tests/build/
+
+# Aplicación Python
+app/.venv/
+__pycache__/
+.pytest_cache/
+
+# Configuración de Eclipse/MCUXpresso: el IDE la regenera
+.settings/language.settings.xml
+
+# Notas de trabajo fuera del repo
+docs/laboratorio-stories-16-18.md
+
+# KiCad: estado local de la GUI, copias de seguridad y archivos temporales
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.lck
+_autosave-*
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_pro-bak

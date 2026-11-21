@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Sintetizador") (type "KiCad") (uri "${KIPRJMOD}/sintetizador.kicad_sym") (options "") (descr "Placa LPCXpresso y adaptador USB-TTL"))
+)

@@ -1,0 +1,13 @@
+{
+  "meta": {
+    "filename": "sintetizador.kicad_pro",
+    "version": 3
+  },
+  "erc": {
+    "rule_severities": {
+      "missing_unit": "ignore",
+      "missing_input_pin": "ignore",
+      "missing_power_pin": "ignore"
+    }
+  }
+}
